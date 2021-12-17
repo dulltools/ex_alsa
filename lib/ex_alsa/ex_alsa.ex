@@ -8,33 +8,36 @@ defmodule ExAlsa do
 
   @on_load :load_nifs
   def load_nifs do
-    :ok = :code.priv_dir(:ex_alsa)
-    |> Path.join("ex_alsa")
-    |> :erlang.load_nif(0)
+    :ok =
+      :code.priv_dir(:ex_alsa)
+      |> Path.join("ex_alsa")
+      |> :erlang.load_nif(0)
   end
 
-  @doc"""
+  @doc """
   Creates a handler which opens an audio interface to the sound card and device.
   """
-  @spec open_handle(String.t()) :: any() 
+  @spec open_handle(String.t()) :: any()
   def open_handle(device) do
     _open_handle(String.to_charlist(device))
   end
 
-  @doc"""
+  @doc """
   TODO
   """
-  @spec set_params(any(), pos_integer(), rates(), pos_integer(), pos_integer()) :: any() 
+  @spec set_params(any(), pos_integer(), rates(), pos_integer(), pos_integer()) :: any()
   def set_params(handle, channels, rate, period_size, buffer_period_size_ratio) do
     _set_params(
       handle,
-      channels, 
+      channels,
       rate,
       period_size,
-      buffer_period_size_ratio, 0)
+      buffer_period_size_ratio,
+      0
+    )
   end
 
-  @doc"""
+  @doc """
   Writes to the soundcard. ExAlsa NIF uses the synchronous `snd_pcm_writei`. 
 
   `write` will prevent overruns (when more frames are sent than what's available in the buffer), by dismissing them and returning the # of frames available in the buffer. It will not prevent underruns (sending too little frames).
@@ -44,14 +47,20 @@ defmodule ExAlsa do
     :erlang.nif_error(:not_loaded)
   end
 
-  @spec _open_handle(charlist()) :: any() 
+  @spec _open_handle(charlist()) :: any()
   def _open_handle(_device) do
     :erlang.nif_error(:not_loaded)
   end
 
-  @spec _set_params(any(), integer(), integer(), integer(), integer(), integer()) :: any() 
-  def _set_params(_handle, _channels, _rate, _period_size, _buffer_period_size_ratio, _stop_threshold) do
+  @spec _set_params(any(), integer(), integer(), integer(), integer(), integer()) :: any()
+  def _set_params(
+        _handle,
+        _channels,
+        _rate,
+        _period_size,
+        _buffer_period_size_ratio,
+        _stop_threshold
+      ) do
     :erlang.nif_error(:not_loaded)
   end
-
 end
