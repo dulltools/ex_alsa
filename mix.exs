@@ -23,7 +23,8 @@ defmodule ExAlsa.MixProject do
   defp deps do
     [
       {:elixir_make, "~> 0.6", runtime: false},
-      {:ex_doc, "~> 0.22.1", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.22.1", only: :dev, runtime: false},
+      {:benchee, "~> 1.0", only: [:test, :dev]}
     ]
   end
 end

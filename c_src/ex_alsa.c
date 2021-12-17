@@ -325,7 +325,7 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 }
 
 static ErlNifFunc funcs[] = {
-    { "write", 2, pcm_write, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    { "write", 2, pcm_write},//, ERL_NIF_DIRTY_JOB_CPU_BOUND},
     { "_set_params", 6, pcm_set_params},
     { "_open_handle", 1, pcm_open_handle},
 };
