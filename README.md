@@ -21,10 +21,16 @@ end
 ```
 ...
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/ex_alsa](https://hexdocs.pm/ex_alsa).
+# TODO
+- [ ] - Write ExAlsa module documentation
+- [ ] - Explore necessity of running on BEAM's dirty scheduler and implication of doing so 
+- [ ] - Write ALSA configuration documentation (may live in a different repository)
+  - [ ] Brief overview of sampling, waves, PMC. Readers should walk away confident that they can produce sound by writing numbers in a vector. 
+  - [ ] How to calculate the maximum sleep between writes
+  - [ ] A better description of each relevant ALSA config -- difference between SW params and HW params
+  - [ ] What are periods/frames/buffers
+  - [ ] Maybe some overview of Linux sound stack
+- [ ] - Finish writing configuration API
 
 ## Influences/Alternative packages
 Check out Mikael Karlsson's excellent https://github.com/karlsson/xalsa for an Erlang/Elixir solution using OTP.
