@@ -6,17 +6,9 @@
 #include <erl_nif.h>
 #include <alsa/asoundlib.h>
 
-static snd_pcm_format_t format = SND_PCM_FORMAT_FLOAT_LE;  /* sample format */
-static unsigned int rate = 44100;           /* stream rate */
-static unsigned int channels = 1;           /* count of channels */
-static unsigned int buffer_time = 500000;       /* ring buffer length in us */
-static unsigned int period_time = 2;       /* period time in us */
-static int period_event = 0;                /* produce poll event after each period */
 static int resample = 1;                /* enable alsa-lib resampling */
-static int periods = 2;
+snd_pcm_uframes_t buffer_size2 = 50000;
 
-static snd_pcm_sframes_t buffer_size;
-static snd_pcm_sframes_t period_size;
 #define alloca(x)  __builtin_alloca(x)
 
 #define ERL_TERM_STRING(str) enif_make_string(env, str, ERL_NIF_LATIN1)
@@ -45,12 +37,6 @@ DECL_ATOM(error);
 
 typedef struct {
     snd_pcm_t * handle;
-    unsigned int format_index;
-    snd_pcm_access_t access;
-    unsigned int period_size;
-    unsigned int channels;
-    FRAME_TYPE** channel_bufs;
-    int fd;
 
 } ex_alsa_t;
 
@@ -109,10 +95,16 @@ static ERL_NIF_TERM pcm_write(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
 
 static int set_hwparams(snd_pcm_t *handle,
         snd_pcm_hw_params_t *params,
-        snd_pcm_access_t access)
+        snd_pcm_access_t access,
+        snd_pcm_format_t format,
+        snd_pcm_uframes_t * period_size,
+        snd_pcm_uframes_t * buffer_size,
+        unsigned int rate,
+        unsigned int channels,
+        unsigned int periods
+)
 {
     unsigned int rrate;
-    snd_pcm_uframes_t size;
     int err, dir;
 
     /* choose all parameters */
@@ -123,12 +115,11 @@ static int set_hwparams(snd_pcm_t *handle,
     }
 
     
-    /* Set number of periods. Periods used to be called fragments. */ 
-    /*err = snd_pcm_hw_params_set_periods(handle, params, periods, 0);
+    err = snd_pcm_hw_params_set_periods(handle, params, periods, 0);
     if (err < 0) {
       printf("Error setting periods: %s\n", snd_strerror(err));
       return err;
-    }*/
+    }
 
     /* set hardware resampling */
     err = snd_pcm_hw_params_set_rate_resample(handle, params, resample);
@@ -165,30 +156,28 @@ static int set_hwparams(snd_pcm_t *handle,
         printf("Rate doesn't match (requested %uHz, get %iHz)\n", rate, err);
         return -EINVAL;
     }
+
     /* set the buffer time */
+    /*
     err = snd_pcm_hw_params_set_buffer_time_near(handle, params, &buffer_time, &dir);
     if (err < 0) {
         printf("Unable to set buffer time %u for playback: %s\n", buffer_time, snd_strerror(err));
         return err;
     }
-    err = snd_pcm_hw_params_get_buffer_size(params, &size);
+    */
+
+    err = snd_pcm_hw_params_set_buffer_size(handle, params, buffer_size2);
     if (err < 0) {
-        printf("Unable to get buffer size for playback: %s\n", snd_strerror(err));
+        printf("Unable to set buffer size for playback: %s\n", snd_strerror(err));
         return err;
     }
-    buffer_size = size;
-    /* set the period time */
-    err = snd_pcm_hw_params_set_period_time_near(handle, params, &period_time, &dir);
+
+    err = snd_pcm_hw_params_set_period_size_near(handle, params, period_size, &dir);
     if (err < 0) {
-        printf("Unable to set period time %u for playback: %s\n", period_time, snd_strerror(err));
+        printf("Unable to set period size for playback: %s\n", snd_strerror(err));
         return err;
     }
-    err = snd_pcm_hw_params_get_period_size(params, &size, &dir);
-    if (err < 0) {
-        printf("Unable to get period size for playback: %s\n", snd_strerror(err));
-        return err;
-    }
-    period_size = size;
+
     /* write the parameters to device */
     err = snd_pcm_hw_params(handle, params);
     if (err < 0) {
@@ -198,7 +187,9 @@ static int set_hwparams(snd_pcm_t *handle,
     return 0;
 }
 
-static int set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_t *swparams)
+static int set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_t *swparams,
+    snd_pcm_uframes_t period_size, unsigned int periods, unsigned int start_threshold
+    )
 {
     int err;
 
@@ -208,27 +199,17 @@ static int set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_t *swparams)
         printf("Unable to determine current swparams for playback: %s\n", snd_strerror(err));
         return err;
     }
-    /* start the transfer when the buffer is almost full: */
-    /* (buffer_size / avail_min) * avail_min */
-    err = snd_pcm_sw_params_set_start_threshold(handle, swparams, period_size * 4);
+
+    // TODO start_threshold
+    err = snd_pcm_sw_params_set_start_threshold(handle, swparams, start_threshold);
     if (err < 0) {
         printf("Unable to set start threshold mode for playback: %s\n", snd_strerror(err));
         return err;
     }
-    /* allow the transfer when at least period_size samples can be processed */
-    /* or disable this mechanism when period event is enabled (aka interrupt like style processing) */
-    err = snd_pcm_sw_params_set_avail_min(handle, swparams, period_event ? buffer_size : period_size);
+    err = snd_pcm_sw_params_set_avail_min(handle, swparams, period_size);
     if (err < 0) {
         printf("Unable to set avail min for playback: %s\n", snd_strerror(err));
         return err;
-    }
-    /* enable period events when requested */
-    if (period_event) {
-        err = snd_pcm_sw_params_set_period_event(handle, swparams, 1);
-        if (err < 0) {
-            printf("Unable to set period event: %s\n", snd_strerror(err));
-            return err;
-        }
     }
     /* write the parameters to the playback device */
     err = snd_pcm_sw_params(handle, swparams);
@@ -263,9 +244,9 @@ static ERL_NIF_TERM pcm_open_handle(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 
 static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    unsigned int channels, rate, buffer_period_size_ratio, stop_threshold;
+    unsigned int channels, rate, periods, start_threshold;
     int ret;
-    snd_pcm_uframes_t buffer_size, period_size; // ulong
+    snd_pcm_uframes_t buffer_size, period_size;
 
     snd_pcm_hw_params_t *hwparams;
     snd_pcm_hw_params_alloca(&hwparams);
@@ -277,19 +258,29 @@ static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     BADARG_IF(!enif_get_uint(env, argv[1], &channels));
     BADARG_IF(!enif_get_uint(env, argv[2], &rate));
     BADARG_IF(!enif_get_ulong(env, argv[3], &period_size));
-    BADARG_IF(!enif_get_uint(env, argv[4], &buffer_period_size_ratio));
-    BADARG_IF(!enif_get_uint(env, argv[5], &stop_threshold));
+    BADARG_IF(!enif_get_uint(env, argv[4], &periods));
+    BADARG_IF(!enif_get_ulong(env, argv[5], &buffer_size));
+    BADARG_IF(!enif_get_uint(env, argv[6], &start_threshold));
 
     ret = set_hwparams(unit->handle, 
             hwparams,
-            SND_PCM_ACCESS_RW_INTERLEAVED
+            SND_PCM_ACCESS_RW_INTERLEAVED,
+            SND_PCM_FORMAT_FLOAT_LE,
+            &period_size,
+            &buffer_size,
+            rate,
+            channels,
+            periods
             );
     if (ret < 0) {
         return ERROR_TUPLE(enif_make_uint(env, ret));
     }
 
     ret = set_swparams(unit->handle, 
-            swparams
+            swparams,
+            period_size,
+            periods,
+            start_threshold
             );
     if (ret < 0) {
         return ERROR_TUPLE(enif_make_uint(env, ret));
@@ -309,7 +300,7 @@ static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
                 enif_make_uint(env, channels),
                 enif_make_ulong(env, buffer_size),
                 enif_make_ulong(env, period_size),
-                enif_make_uint(env, stop_threshold)
+                enif_make_uint(env, start_threshold)
                 ));
 }
 
@@ -326,7 +317,7 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 
 static ErlNifFunc funcs[] = {
     { "write", 2, pcm_write},//, ERL_NIF_DIRTY_JOB_CPU_BOUND},
-    { "_set_params", 6, pcm_set_params},
+    { "_set_params", 7, pcm_set_params},
     { "_open_handle", 1, pcm_open_handle},
 };
 

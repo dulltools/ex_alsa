@@ -32,13 +32,21 @@ defmodule ExAlsaTest do
       {:ok, handle} = ExAlsa.open_handle("default")
 
       {:ok, {sample_rate, channels, buffer_size, period_size, stop_threshold}} =
-        ExAlsa.set_params(handle, 1, 44100, 512, 2)
+        ExAlsa.set_params(handle, %{
+          channels: 1,
+          rate: 44100,
+          buffer_size: 500,
+          periods: 3,
+          period_size: 20,
+          start_threshold: 1024
+        })
 
       seconds = 3
 
       frames = Enum.take(sin_freq(220, seconds), 44100 * seconds)
       seconds_per_frame = 1.0 / 44100.0
       frames = get_frames(seconds / 3)
+      IO.inspect(100)
       send_frame(frames, handle, 940)
     end
   end
