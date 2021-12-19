@@ -9,7 +9,15 @@ defmodule ExAlsa.MixProject do
       compilers: [:elixir_make] ++ Mix.compilers(),
       make_cwd: "c_src",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+
+      # Docs
+      source_url: "https://github.com/eleanor-daw/ex_alsa",
+      homepage_url: "https://github.com/eleanor-daw/ex_alsa",
+      docs: [
+        main: "Getting started",
+        extras: ["README.md"]
+      ]
     ]
   end
 
