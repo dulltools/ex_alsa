@@ -36,7 +36,8 @@ defmodule ExAlsa do
 
   @doc """
   Pass parameters and attempt to set them in ALSA. Will set both HW params and
-  SW params.
+  SW params. Often what you pass will not be what was set. This is dependent on
+  limitations set by your soundcard.
 
   ## Options
   Depending on what you set here, it will change the structure of the payload
@@ -46,14 +47,17 @@ defmodule ExAlsa do
   e.g. A single microphone can produce one channel of audio and a single 
   speaker can receive one channel of audio. Headphones would receive 2 channels of sound. [Wildlife Acoustics](https://www.wildlifeacoustics.com/resources/faqs/what-is-an-audio-channel)
 
-  * `rate` - The number of samples that are inputted or outputted per second (Hz).
+  * `rate` - The number of [frames](TODO) that are inputted or outputted per second (Hz).
 
   * `period_size` - The number of [frames](TODO) inputted/outputted before the sound card
-  checks for more.
+  checks for more. This is typically buffer_size / periods. It will often be overwritten by what your sound card declares.
 
   * `periods` - The number of periods in a buffer.
 
-  * 
+  * `buffer_size` - The number of [frames](TODO) buffered.
+
+  * `start_threshold` - The number of initial frames played or captured in order to begin.
+
   ## How ALSA API works
   ALSA is both notoriously esoteric and famously helpful when it comes to
   configuring how you want ALSA and the sound driver to operate. ALSA offers
@@ -90,7 +94,8 @@ defmodule ExAlsa do
 
   `write` will prevent overruns (when more frames are sent than what's available
   in the buffer), by dismissing them and returning the # of frames available in
-  the buffer. It will not prevent underruns (sending too little frames).
+  the buffer. It will not prevent underruns (sending too little frames). See the
+  tests for an example that prevents both overruns and most underruns.
   """
   @spec write(handle(), charlist()) :: {:error, integer()} | {:ok, integer(), integer()}
   def write(_handle, _frames) do
