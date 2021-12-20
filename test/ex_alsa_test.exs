@@ -31,14 +31,19 @@ defmodule ExAlsaTest do
     test "performance test" do
       {:ok, handle} = ExAlsa.open_handle("default")
 
-      {:ok, {sample_rate, channels, buffer_size, period_size, stop_threshold}} =
+      {:ok, %{
+        buffer_size: buffer_size,
+        periods: periods,
+        period_size: period_size,
+        rate: rate,
+        start_threshold: start_threshold,
+        stop_threshold: stop_threshold,
+      }} =
         ExAlsa.set_params(handle, %{
           channels: 1,
           rate: 44100,
-          buffer_size: 500,
-          periods: 3,
-          period_size: 20,
-          start_threshold: 1024
+          periods: 2,
+          period_size: 2000,
         })
 
       seconds = 3
@@ -46,7 +51,6 @@ defmodule ExAlsaTest do
       frames = Enum.take(sin_freq(220, seconds), 44100 * seconds)
       seconds_per_frame = 1.0 / 44100.0
       frames = get_frames(seconds / 3)
-      IO.inspect(100)
       send_frame(frames, handle, 940)
     end
   end
@@ -112,15 +116,6 @@ defmodule ExAlsaTest do
 
     Enum.map(0..floor(44100 * time), fn i ->
       :math.sin(radians_per_second * i * seconds_per_frame)
-    end)
-  end
-
-  defp cos_freq(pitch, time) do
-    radians_per_second = pitch * 2.0 * :math.pi()
-    seconds_per_frame = 1.0 / 44100.0
-
-    Enum.map(0..floor(44100 * time), fn i ->
-      :math.cos(radians_per_second * i * seconds_per_frame)
     end)
   end
 end

@@ -7,7 +7,6 @@
 #include <alsa/asoundlib.h>
 
 static int resample = 1;                /* enable alsa-lib resampling */
-snd_pcm_uframes_t buffer_size2 = 50000;
 
 #define alloca(x)  __builtin_alloca(x)
 
@@ -31,6 +30,15 @@ snd_pcm_uframes_t buffer_size2 = 50000;
 
 DECL_ATOM(ok);
 DECL_ATOM(error);
+
+// return config params
+DECL_ATOM(channels);
+DECL_ATOM(rate);
+DECL_ATOM(buffer_size);
+DECL_ATOM(periods);
+DECL_ATOM(period_size);
+DECL_ATOM(start_threshold);
+DECL_ATOM(stop_threshold);
 
 #define FRAME_TYPE float
 #define FRAME_SIZE sizeof(FRAME_TYPE)
@@ -166,7 +174,7 @@ static int set_hwparams(snd_pcm_t *handle,
     }
     */
 
-    err = snd_pcm_hw_params_set_buffer_size(handle, params, buffer_size2);
+    err = snd_pcm_hw_params_get_buffer_size(params, buffer_size);
     if (err < 0) {
         printf("Unable to set buffer size for playback: %s\n", snd_strerror(err));
         return err;
@@ -188,7 +196,8 @@ static int set_hwparams(snd_pcm_t *handle,
 }
 
 static int set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_t *swparams,
-    snd_pcm_uframes_t period_size, unsigned int periods, unsigned int start_threshold
+    unsigned int start_threshold,
+    snd_pcm_uframes_t *stop_threshold 
     )
 {
     int err;
@@ -200,17 +209,18 @@ static int set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_t *swparams,
         return err;
     }
 
-    // TODO start_threshold
     err = snd_pcm_sw_params_set_start_threshold(handle, swparams, start_threshold);
     if (err < 0) {
         printf("Unable to set start threshold mode for playback: %s\n", snd_strerror(err));
         return err;
     }
-    err = snd_pcm_sw_params_set_avail_min(handle, swparams, period_size);
+
+    err = snd_pcm_sw_params_get_stop_threshold(swparams, stop_threshold);
     if (err < 0) {
-        printf("Unable to set avail min for playback: %s\n", snd_strerror(err));
+        printf("Unable to get stop threshold mode for playback: %s\n", snd_strerror(err));
         return err;
     }
+
     /* write the parameters to the playback device */
     err = snd_pcm_sw_params(handle, swparams);
     if (err < 0) {
@@ -246,7 +256,7 @@ static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
 {
     unsigned int channels, rate, periods, start_threshold;
     int ret;
-    snd_pcm_uframes_t buffer_size, period_size;
+    snd_pcm_uframes_t buffer_size, period_size, stop_threshold;
 
     snd_pcm_hw_params_t *hwparams;
     snd_pcm_hw_params_alloca(&hwparams);
@@ -259,7 +269,6 @@ static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     BADARG_IF(!enif_get_uint(env, argv[2], &rate));
     BADARG_IF(!enif_get_ulong(env, argv[3], &period_size));
     BADARG_IF(!enif_get_uint(env, argv[4], &periods));
-    BADARG_IF(!enif_get_ulong(env, argv[5], &buffer_size));
     BADARG_IF(!enif_get_uint(env, argv[6], &start_threshold));
 
     ret = set_hwparams(unit->handle, 
@@ -278,9 +287,8 @@ static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
 
     ret = set_swparams(unit->handle, 
             swparams,
-            period_size,
-            periods,
-            start_threshold
+            start_threshold,
+            &stop_threshold
             );
     if (ret < 0) {
         return ERROR_TUPLE(enif_make_uint(env, ret));
@@ -294,14 +302,19 @@ static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
 
     // TODO turn this into a map
     // https://dnlserrano.dev/2019/03/10/elixir-nifs.html
-    return OK_TUPLE(
-            enif_make_tuple5(env,
-                enif_make_uint(env, rate),
-                enif_make_uint(env, channels),
-                enif_make_ulong(env, buffer_size),
-                enif_make_ulong(env, period_size),
-                enif_make_uint(env, start_threshold)
-                ));
+
+    ERL_NIF_TERM param_map = enif_make_new_map(env);
+
+    ERL_NIF_TERM key = enif_make_string(env, "format", ERL_NIF_LATIN1);
+    ERL_NIF_TERM value = enif_make_uint(env, rate);
+    enif_make_map_put(env, param_map, ATOM(rate), enif_make_uint(env, rate), &param_map);
+    enif_make_map_put(env, param_map, ATOM(buffer_size), enif_make_ulong(env, buffer_size), &param_map);
+    enif_make_map_put(env, param_map, ATOM(periods), enif_make_uint(env, periods), &param_map);
+    enif_make_map_put(env, param_map, ATOM(period_size), enif_make_ulong(env, period_size), &param_map);
+    enif_make_map_put(env, param_map, ATOM(start_threshold), enif_make_ulong(env, start_threshold), &param_map);
+    enif_make_map_put(env, param_map, ATOM(stop_threshold), enif_make_ulong(env, stop_threshold), &param_map);
+
+    return enif_make_tuple2(env, ATOM(ok), param_map);
 }
 
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
@@ -309,16 +322,32 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     LOAD_ATOM(ok);
     LOAD_ATOM(error);
 
+    LOAD_ATOM(channels);
+    LOAD_ATOM(rate);
+    LOAD_ATOM(buffer_size);
+    LOAD_ATOM(periods);
+    LOAD_ATOM(period_size);
+    LOAD_ATOM(start_threshold);
+    LOAD_ATOM(stop_threshold);
+
     int flags = ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER;
     resource_type = enif_open_resource_type(env, "ex_alsa_nif", "handle", NULL, flags, NULL);
     if (resource_type == NULL) return -1;
     return 0;
 }
 
+#if HAS_DIRTY_SCHEDULER
 static ErlNifFunc funcs[] = {
-    { "write", 2, pcm_write},//, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    { "write", 2, pcm_write, ERL_NIF_DIRTY_JOB_CPU_BOUND},
     { "_set_params", 7, pcm_set_params},
     { "_open_handle", 1, pcm_open_handle},
 };
+#else
+static ErlNifFunc funcs[] = {
+    { "write", 2, pcm_write},
+    { "_set_params", 7, pcm_set_params},
+    { "_open_handle", 1, pcm_open_handle},
+};
+#endif
 
 ERL_NIF_INIT(Elixir.ExAlsa, funcs, load, NULL, NULL, NULL)

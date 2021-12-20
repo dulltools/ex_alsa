@@ -70,7 +70,7 @@ defmodule ExAlsa do
     channels = Map.get(options, :channels, 1)
     rate = Map.fetch!(options, :rate)
     period_size = Map.get(options, :period_size)
-    periods = Map.get(options, :periods, 3)
+    periods = Map.get(options, :periods, 2)
     buffer_size = Map.get(options, :buffer_size, periods * period_size)
     start_threshold = Map.get(options, :start_threshold, buffer_size * 2)
 
