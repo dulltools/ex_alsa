@@ -16,7 +16,7 @@ defmodule ExAlsa.MixProject do
       homepage_url: "https://github.com/eleanor-daw/ex_alsa",
       docs: [
         main: "Getting started",
-        extras: ["README.md"]
+        extras: ["README.md", "guides/ALSA.md"]
       ]
     ]
   end

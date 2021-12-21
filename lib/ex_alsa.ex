@@ -58,16 +58,6 @@ defmodule ExAlsa do
 
   * `start_threshold` - The number of initial frames played or captured in order to begin.
 
-  ## How ALSA API works
-  ALSA is both notoriously esoteric and famously helpful when it comes to
-  configuring how you want ALSA and the sound driver to operate. ALSA offers
-  an API that allows you to put what you would like, and it will then return
-  to you what the soundcard can actually support. This is incredibly helpful,
-  but note that it doesn't support this in all cases, and you have if you're
-  doing any operations based on a defined buffer or period size, you have to
-  make sure you use what ALSA returns unless you're certain your soundcard
-  supports your configuration.
-
   """
   @spec set_params(handle(), options()) :: handle()
   def set_params(handle, options) do
