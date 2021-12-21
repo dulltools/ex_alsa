@@ -33,29 +33,29 @@ ExAlsa.write(List.duplicate(0, buffer_size))
 ```
 
 # TODO
-- [ ] - Write ExAlsa module documentation
-- [ ] - Explore necessity of running on BEAM's dirty scheduler and implication of doing so 
-- [ ] - Write ALSA configuration documentation (may live in a different repository)
+- [ ] Write ExAlsa module documentation
+- [ ] Explore necessity of running on BEAM's dirty scheduler and implication of doing so 
+- [ ] Write ALSA configuration documentation (may live in a different repository)
   - [ ] Brief overview of sampling, waves, PMC. Readers should walk away confident that they can produce sound by writing numbers in a vector. 
   - [ ] How to calculate the maximum sleep between writes
   - [ ] A better description of each relevant ALSA config -- difference between SW params and HW params
   - [ ] What are periods/frames/buffers
   - [ ] Maybe some overview of Linux sound stack
-- [ ] - Finish writing configuration API
-- [ ] - Support different access methods
-- [ ] - Support different formats
-- [ ] - Capture sound
+- [ ] Finish writing configuration API
+- [ ] Support different access methods
+- [ ] Support different formats
+- [ ] Capture sound
 
 ## Influences/Alternative packages
 Check out Mikael Karlsson's excellent https://github.com/karlsson/xalsa for an Erlang/Elixir solution using OTP.
 
 ## Further ALSA Reading
-A lot of the documentation here is referenced from the URLs before.
+A lot of the documentation here is referenced from the URLs below:
 
-https://www.linuxjournal.com/article/6735
-https://alsa.opensrc.org/
-https://www.alsa-project.org/wiki/Tutorials_and_Presentations
-https://www.alsa-project.org/wiki/FramesPeriods
-https://stackoverflow.com/questions/24040672/the-meaning-of-period-in-alsa
-https://albertlockett.wordpress.com/2013/11/06/creating-digital-audio-with-alsa/
-https://www.spinics.net/lists/alsa-devel/msg58343.html
+* https://www.linuxjournal.com/article/6735
+* https://alsa.opensrc.org/
+* https://www.alsa-project.org/wiki/Tutorials_and_Presentations
+* https://www.alsa-project.org/wiki/FramesPeriods
+* https://stackoverflow.com/questions/24040672/the-meaning-of-period-in-alsa
+* https://albertlockett.wordpress.com/2013/11/06/creating-digital-audio-with-alsa/
+* https://www.spinics.net/lists/alsa-devel/msg58343.html
