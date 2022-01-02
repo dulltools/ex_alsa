@@ -305,8 +305,6 @@ static ERL_NIF_TERM pcm_set_params(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
 
     ERL_NIF_TERM param_map = enif_make_new_map(env);
 
-    ERL_NIF_TERM key = enif_make_string(env, "format", ERL_NIF_LATIN1);
-    ERL_NIF_TERM value = enif_make_uint(env, rate);
     enif_make_map_put(env, param_map, ATOM(rate), enif_make_uint(env, rate), &param_map);
     enif_make_map_put(env, param_map, ATOM(buffer_size), enif_make_ulong(env, buffer_size), &param_map);
     enif_make_map_put(env, param_map, ATOM(periods), enif_make_uint(env, periods), &param_map);

@@ -44,6 +44,7 @@ defmodule ExAlsaTest do
           rate: 44100,
           periods: 2,
           period_size: 2000,
+          start_threshold: 100
         })
 
       seconds = 3
@@ -69,11 +70,9 @@ defmodule ExAlsaTest do
 
       case ExAlsa.write(handle, Enum.take(frame, n)) do
         {:error, requested} ->
-          # IO.puts("Error: #{requested}")
           send_frame(frame, handle, requested)
 
         {:ok, sent, requested} ->
-          # IO.puts("Sent: #{sent} #{requested}")
           frame = Enum.drop(frame, sent)
           send_frame(frame, handle, min(Enum.count(frame), requested))
       end
