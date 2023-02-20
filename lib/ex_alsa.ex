@@ -7,13 +7,13 @@ defmodule ExAlsa do
   @type rates() :: 44100 | 48000 | 96000 | 192_000
 
   @type options :: %{
-    channels: pos_integer(),
-    rate: rates(),
-    period_size: pos_integer(),
-    buffer_size: pos_integer(),
-    periods: pos_integer(),
-    start_threshold: pos_integer()
-  }
+          channels: pos_integer(),
+          rate: rates(),
+          period_size: pos_integer(),
+          buffer_size: pos_integer(),
+          periods: pos_integer(),
+          start_threshold: pos_integer()
+        }
 
   @type handle :: any()
 
@@ -98,23 +98,23 @@ defmodule ExAlsa do
   end
 
   @spec _set_params(
-    handle(),
-    pos_integer(),
-    rates(),
-    pos_integer(),
-    pos_integer(),
-    pos_integer(),
-    pos_integer()
-  ) :: handle()
+          handle(),
+          pos_integer(),
+          rates(),
+          pos_integer(),
+          pos_integer(),
+          pos_integer(),
+          pos_integer()
+        ) :: handle()
   def _set_params(
-    _handle,
-    _channels,
-    _rate,
-    _period_size,
-    _periods,
-    _buffer_size,
-    _start_threshold
-  ) do
+        _handle,
+        _channels,
+        _rate,
+        _period_size,
+        _periods,
+        _buffer_size,
+        _start_threshold
+      ) do
     :erlang.nif_error(:not_loaded)
   end
 end

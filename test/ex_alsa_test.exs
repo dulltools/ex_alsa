@@ -31,14 +31,15 @@ defmodule ExAlsaTest do
     test "performance test" do
       {:ok, handle} = ExAlsa.open_handle("default")
 
-      {:ok, %{
-        buffer_size: buffer_size,
-        periods: periods,
-        period_size: period_size,
-        rate: rate,
-        start_threshold: start_threshold,
-        stop_threshold: stop_threshold,
-      }} =
+      {:ok,
+       %{
+         buffer_size: buffer_size,
+         periods: periods,
+         period_size: period_size,
+         rate: rate,
+         start_threshold: start_threshold,
+         stop_threshold: stop_threshold
+       }} =
         ExAlsa.set_params(handle, %{
           channels: 1,
           rate: 44100,
